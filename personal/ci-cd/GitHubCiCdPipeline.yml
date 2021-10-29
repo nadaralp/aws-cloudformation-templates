@@ -2,26 +2,23 @@
 
 ##
 ## Template TODO:
-#1. Restrain IAMRoleForBuildCodeBuild to over permissive "*" resource -> Reference the cloudformation bucket
-#2. Add all github events to codebuild
-#3. Include Parameters
-#4. Change CodeBuild deploy project IAM Role to separate one
-#5. Create Log Group that will be attached and deleted with the CI-CD Pipeline
-#6. Add tags to all resources
+#1. Restrain IAMRoleForBuildCodeBuild to over permissive "*" resource -> Reference the cloudformation bucket -> Done V
+#2. Add all github events to codebuild -> Done? V
+#3. Include Parameters -> Done V
+#4. Change CodeBuild deploy project IAM Role to separate one -> Done V
+#5. Create Log Group that will be attached and deleted with the CI-CD Pipeline -> Done V
+#6. Add tags to all resources -> Can't be done
 #7. Create custom resource to clear s3 bucket when deleting the project
-
-
-#TODO: Check if you can give S3:Get* Policy??
 
 # Author: Nadar Alpenidze
 ##
-
 
 # Insights section
 # 1. To trigger the codepipeline you need to regitser a github webhook to it !!!!
 # 2. CodePipeline itself doesn't have logs. It uses CodeBuilds log groups
 # 3. Logical ID is the name of the resource in our template
 # 4. AWS adds 3 tags by default with CloudFormation: aws:cloudformation:stack-name, aws:cloudformation:logical-id and aws:cloudformation:stack-id
+# 5. You can give permissions with wildcards. Like s3:Get*
 
 # Conventions Built:
 # 1. Always start the Resource Logical ID with the Resource Type.
@@ -50,13 +47,22 @@ Parameters:
     Description: GitHub Repo Owner
     Type: String
 
-  # IsManualApprovalStepActive:
-  #   Description: Specify whether you want manual approval before running the deploy step
-  #   Type: String
-  #   AllowedValues:
-  #     - "true"
-  #     - "false"
-  #   Default: "true"
+  TriggerBranch:
+    Description: Branch to trigger Pipeline on. PR's and Merges
+    Type: String
+
+  IsManualApprovalStepActive:
+    Description: Specify whether you want manual approval before running the deploy step
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
+
+
+Conditions:
+  IsManualApproval:
+      !Equals [!Ref IsManualApprovalStepActive, "true"]
 
 Resources:
   # Role for CodeBuild
@@ -176,7 +182,7 @@ Resources:
           - - Type: EVENT
               Pattern: PULL_REQUEST_CREATED, PULL_REQUEST_UPDATED, PULL_REQUEST_REOPENED
             - Type: BASE_REF
-              Pattern: ^refs/heads/master$
+              Pattern: !Sub ^refs/heads/${TriggerBranch}$
               ExcludeMatchedPattern: false
         # - - Type: EVENT
         #     Pattern: PUSH
@@ -267,7 +273,7 @@ Resources:
       #   Status: Enabled
 
   # GitHub WebHook to trigger the pipeline
-  AppPipelineWebhook:
+  CodePipelineGitHubWebhook:
     Type: 'AWS::CodePipeline::Webhook'
     Properties:
       Name: !Sub ${AWS::StackName}-GitHubWebHook
@@ -305,7 +311,7 @@ Resources:
             Configuration:
               Owner: !Ref GitHubOwner
               Repo: !Ref GitHubRepo
-              Branch: master #TODO: From parameter
+              Branch: !Ref TriggerBranch
               PollForSourceChanges: false #To use GitHub webhooks
               OAuthToken: "{{resolve:secretsmanager:github_secrets:SecretString:AWS_CI_CD_GITHUB}}"
             RunOrder: 1
@@ -326,6 +332,24 @@ Resources:
               - Name: SourceStepArtifacts
             OutputArtifacts:
               - Name: BuildStepArtifacts
+
+      - !If
+        - IsManualApproval
+        - Name: ManualApproval
+          Actions:
+            -
+              Name: Approval
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: '1'
+              Configuration: {}
+                # NotificationArn: <<arn>> #TODO: add
+              InputArtifacts: []
+              RunOrder: 1
+        - !Ref AWS::NoValue
+
       - Name: Deploy
         Actions:
           -
