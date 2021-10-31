@@ -1,0 +1,56 @@
+# TASK
+# 1. Create a bucket
+# 2. Upload something to the bucket
+# 3. Execute delete on the stack and allow the lambda to empty the bucket(custom resource)
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Testing with custom resource to delete a bucket
+
+Resources:
+  S3BucketMyBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: nadar-custom-testing-bucket
+
+  IAMRoleForLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: ["sts:AssumeRole"]
+            Effect: Allow
+            Principal:
+              Service: [lambda.amazonaws.com]
+      Policies:
+        - 
+         PolicyName: "lambdarootpolicy"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+              - 
+                Effect: "Allow"
+                Action: 
+                  - "cloudwatch:*"
+                  - "logs:*"
+                Resource: "*"
+
+  LambdaFunctionTest:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: test-function-nadar-alp
+      Role: !GetAtt IAMRoleForLambda.Arn
+      Runtime: nodejs14.x
+      Handler: function.handler
+      Code:
+        S3Bucket: pandologic-public
+        S3Key: lambda/lambda.zip
+
+
+  MyFirstCustomResource:
+      Type: 'Custom::LambdaThatShouldDeleteBucket'
+      Properties:
+        ServiceToken: !GetAtt LambdaFunctionTest.Arn
+        Key1: MyCustomKey
+        Name: Nadar Alpenidze
+        EnvironmentCustom: Staga

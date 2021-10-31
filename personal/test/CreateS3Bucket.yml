@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creation of test S3 Resource - Delete that template"
+
+Parameters:
+  ParentStackName:
+    Description: Parent stack name. If parent stack doesn't exist. empty string is passed
+    Type: String
+    Default: ""
+
+Conditions:
+  IsChildStack:
+    !Not [!Equals [!Ref ParentStackName, ""]]
+
+Resources:
+  S3BucketTestBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !If [IsChildStack, !Sub "${ParentStackName}-child" , !Sub "${AWS::StackName}-axzcaz"]
+      # BucketName: "{{resolve:secretsmanager:github_secrets:SecretString:testkey}}"
+      Tags:
+        - Key: Author
+          Value: Nadar Alpenidze
+
+
+Outputs:
+  TheBucketName:
+    Description: Bucket Name
+    Value: !Ref S3BucketTestBucket
+
+
+  TheSecret:
+    Description: Some Secret
+    Value: "{{resolve:secretsmanager:github_secrets:SecretString:testkey}}"

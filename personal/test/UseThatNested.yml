@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Test of using Nested Stack"
+
+
+Resources:
+  Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://pandologic-public.s3.amazonaws.com/cloudformation/test/CreateS3Bucket.yml
+      Parameters:
+        ParentStackName: !Ref AWS::StackName

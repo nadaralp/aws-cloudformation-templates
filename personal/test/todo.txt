@@ -1,0 +1,16 @@
+1. Check if nested stacks get psuedo parameters - Psuedo parameters are passed. But the AWS::StackName changes for the child template since it has a different stack name.
+I solved it by passing the ParentStackName to the template
+
+2. Check if nested stack can resolve parameters dynamically.
+You can. When you resolve a secret it doesn't show the plain value never.
+But the resources created will have the value stored in the secret.
+
+For example: The Physical ID will be {{resolve:secretsmanager:github_secrets:SecretString:testkey}}
+But internally it will create the required bucket
+
+
+3. Does deleting parent stack deletes all child?
+Yes
+
+
+4. Create RDS with VPC cloudformation templates

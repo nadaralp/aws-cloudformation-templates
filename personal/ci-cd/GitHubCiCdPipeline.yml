@@ -24,6 +24,9 @@
 # 1. Always start the Resource Logical ID with the Resource Type.
 # 2. S3 buckets and CloudFormation stack names are lower-kebab-case. All other resources are {StackName}-PascalCaseExplanation
 
+# Bugs:
+# 1. Serverless running in CodeBuild has no permission to deploy
+
 
 
 AWSTemplateFormatVersion: "2010-09-09"
@@ -51,6 +54,14 @@ Parameters:
     Description: Branch to trigger Pipeline on. PR's and Merges
     Type: String
 
+  ENVNAME:
+    Description: To what environment to deploy (dev/qa/prod)
+    Type: String
+    AllowedValues:
+      - "prod"
+      - "qa"
+      - "dev"
+
   IsManualApprovalStepActive:
     Description: Specify whether you want manual approval before running the deploy step
     Type: String
@@ -63,6 +74,9 @@ Parameters:
 Conditions:
   IsManualApproval:
       !Equals [!Ref IsManualApprovalStepActive, "true"]
+
+  # IsDevEnvironment:
+  #   !Equals [!Ref ENVNAME, "dev"]
 
 Resources:
   # Role for CodeBuild
@@ -133,6 +147,19 @@ Resources:
                 Resource:
                   - !Sub ${S3BucketPipelineArtifacts.Arn}/*
                   - !GetAtt S3BucketPipelineArtifacts.Arn
+              - Sid: SlsDeployPermissions
+                Effect: Allow
+                Action:
+                  - "cloudformation:*"
+                  - "s3:*"
+                  - "execute-api:*" #Not sure if needed actually
+                  - "apigateway:*"
+                  - "iam:*"
+                  - "logs:*"
+                  - "cloudwatch:*"
+                  - "lambda:*"
+                Resource:
+                  - "*" #I should restrict it to resources containing the string serverless
                 
   # Source Credentials to specify OAuth tokens for your GitHub/BitBucket provider
   CodeBuildSourceCredential:
@@ -209,9 +236,9 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: !Ref CodeBuildImage
-        # EnvironmentVariables:
-        #   - Name: ENV_NAME
-        #     Value: dev
+        EnvironmentVariables:
+          - Name: ENV_NAME
+            Value: !Ref ENVNAME
       Source:
         Type: CODEPIPELINE
         BuildSpec: deployspec.yml
@@ -246,13 +273,6 @@ Resources:
                 Resource:
                   - !GetAtt CodeBuildBuildProject.Arn
                   - !GetAtt CodeBuildDeployProject.Arn
-              # - Sid: "CloudWatchPermissions"
-              #   Effect: "Allow"
-              #   Action:
-              #     - "cloudwatch:*"
-              #     - "logs:*"
-              #   Resource:
-              #     - "*"
               - Sid: S3Permissions
                 Effect: Allow
                 Action:
@@ -338,7 +358,7 @@ Resources:
         - Name: ManualApproval
           Actions:
             -
-              Name: Approval
+              Name: ApprovalAction
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
