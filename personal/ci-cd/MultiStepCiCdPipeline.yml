@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  GitHubRepo:
+    Description: GitHub repository name
+    Type: String
+  GitHubOwner:
+    Description: GitHub Repo Owner
+    Type: String
+
+Resources:
+  CICDPipelineForMasterBranch:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://pandologic-public.s3.amazonaws.com/cloudformation/ci-cd/GitHubCiCdPipeline.yml
+      Parameters:
+        GitHubRepo: !Ref GitHubRepo
+        GitHubOwner: !Ref GitHubOwner
+        TriggerBranch: master
+        IsManualApprovalStepActive: "true"
+
+  # CICDPipelineForQABranch:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: https://pandologic-public.s3.amazonaws.com/cloudformation/ci-cd/GitHubCiCdPipeline.yml
+  #     Parameters:
+  #       GitHubRepo: !Ref GitHubRepo
+  #       GitHubOwner: !Ref GitHubOwner
+  #       TriggerBranch: qa
+  #       IsManualApprovalStepActive: "false"

@@ -2,13 +2,11 @@
 
 ##
 ## Template TODO:
-#1. Restrain IAMRoleForBuildCodeBuild to over permissive "*" resource -> Reference the cloudformation bucket -> Done V
-#2. Add all github events to codebuild -> Done? V
-#3. Include Parameters -> Done V
-#4. Change CodeBuild deploy project IAM Role to separate one -> Done V
-#5. Create Log Group that will be attached and deleted with the CI-CD Pipeline -> Done V
-#6. Add tags to all resources -> Can't be done
-#7. Create custom resource to clear s3 bucket when deleting the project
+#0. Receive SecretsManager path in parameters and use !Join to add them.
+# Example: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSInstanceRotationSecret, ':SecretString:username}}' ]]
+#1. Create custom resource to clear s3 bucket when deleting the project
+#2. SNS Topic to send approval message
+#3. EventBridge rule + lambda to notify when CodePipeline was successful or failed -> Participants list
 
 # Author: Nadar Alpenidze
 ##
@@ -19,6 +17,8 @@
 # 3. Logical ID is the name of the resource in our template
 # 4. AWS adds 3 tags by default with CloudFormation: aws:cloudformation:stack-name, aws:cloudformation:logical-id and aws:cloudformation:stack-id
 # 5. You can give permissions with wildcards. Like s3:Get*
+# 6. For Nested Stack, your CloudFormation template should live in s3 bucket
+# 7. You can also give Principal: * to allow all type of principles.
 
 # Conventions Built:
 # 1. Always start the Resource Logical ID with the Resource Type.
@@ -27,7 +27,7 @@
 
 
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CI-CD Template example"
+Description: "CI-CD Template fully integrated with GitHub"
 
 Parameters:
   # ProjectName:
